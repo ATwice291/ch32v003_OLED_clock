@@ -44,6 +44,8 @@ set(CMAKE_EXE_LINKER_FLAGS "-T ${LINKER_SCRIPT} -nostartfiles -Wl,--gc-sections"
 
 include_directories(inc)
 include_directories(Periph)
+include_directories(Drivers/ds3231)
+include_directories(Drivers/ssd1306)
 add_executable(${PROJECT_NAME}.elf
     src/main.cpp
     src/startup_ch32v00x.S

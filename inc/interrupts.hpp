@@ -12,5 +12,5 @@ extern "C" void HardFault_Handler(void) {
 
 extern "C" void SysTick_Handler(void) {
     SysTick->SR = 0;
-    SysTickTimer::incrementTicks();
+    SysTickMsTimer::incrementTicks();
 }
