@@ -4,6 +4,13 @@ A real-time clock using CH32V003 (RISC-V), DS3231 RTC, and SSD1306 OLED display.
 ## Demo
 ![OLED Clock](PCB/0.JPG)
 
+## Schematic
+![OLED Clock](PCB/schematic.png)
+
+## PCB
+![OLED Clock](PCB/1.JPG)
+![OLED Clock](PCB/3.JPG)
+
 ## Features
 - Displays time (HH:MM:SS), date (DD.MM or DD.MM.YYYY), and temperature (TT°C).
 - Setup mode for adjusting time/date via three buttons (Mode, Plus, Minus).
