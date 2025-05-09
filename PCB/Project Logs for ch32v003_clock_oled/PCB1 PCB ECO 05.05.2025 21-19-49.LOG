@@ -1,6 +1,0 @@
-Removed Pin From Net: NetName=3V3 Pin=DD1-2
-Removed Pin From Net: NetName=GND Pin=DD1-13
-Removed Pin From Net: NetName=VBAT Pin=DD1-14
-Removed Pin From Net: NetName=SDA Pin=DD1-15
-Removed Pin From Net: NetName=SCL Pin=DD1-16
-Removed Member From Class: ClassName=Sheet1 Member=DD1

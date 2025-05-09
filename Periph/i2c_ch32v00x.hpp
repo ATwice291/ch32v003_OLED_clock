@@ -30,7 +30,6 @@ enum struct I2cEvent {
     /* Slave Transmitter mode -----------------------*/
     slaveByteTransmitted = 0x00060084,  /* EVT3 - TRA, BUSY, TXE and BTF flags */
     slaveByteTransmitting = 0x00060080,  /* EVT3 - TRA, BUSY and TXE flags */
-    ackFailure = 0x00000400  /* EVT3_2 - AF flag */
 };
 
 template <I2cInstance instance = I2cInstance::i2c1,

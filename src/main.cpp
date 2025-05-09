@@ -1,3 +1,6 @@
+// Copyright (c) 2025 Perevozchikov Aleksei [ATwice291]
+// Licensed under the MIT License. See LICENSE file.
+
 #include "main.hpp"
 #include "interrupts.hpp"
 
@@ -6,7 +9,8 @@ SSD1306* pOledDisplay;
 
 uint8_t oledBuf[SSD1306::BUFFER_SIZE];
 
-static const uint8_t font8x8[10][8] = {
+static constexpr uint8_t FONT_SIZE = 13;
+static const uint8_t font8x8[FONT_SIZE][8] = {
     {0x3C, 0x42, 0x42, 0x42, 0x42, 0x42, 0x42, 0x3C}, // 0
     {0x08, 0x18, 0x08, 0x08, 0x08, 0x08, 0x08, 0x1C}, // 1
     {0x3C, 0x42, 0x02, 0x1C, 0x20, 0x40, 0x42, 0x7E}, // 2
@@ -16,7 +20,10 @@ static const uint8_t font8x8[10][8] = {
     {0x3C, 0x42, 0x40, 0x7C, 0x42, 0x42, 0x42, 0x3C}, // 6
     {0x7E, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x40}, // 7
     {0x3C, 0x42, 0x42, 0x3C, 0x42, 0x42, 0x42, 0x3C}, // 8
-    {0x3C, 0x42, 0x42, 0x42, 0x3E, 0x02, 0x42, 0x3C}  // 9
+    {0x3C, 0x42, 0x42, 0x42, 0x3E, 0x02, 0x42, 0x3C}, // 9
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x60, 0x60}, //.
+    {0x00, 0x00, 0x60, 0x60, 0x00, 0x60, 0x60, 0x00}, //:
+    {0x30, 0x48, 0x48, 0x30, 0x00, 0x00, 0x00, 0x00}  //D is DEGREES
 };
 
 enum struct ClockState{
@@ -43,43 +50,34 @@ void showCursor(SetupState select, bool isBlink);
 bool modeButtonPressed();
 bool plusButtonPressed();
 bool minusButtonPressed();
-void drawNumber(uint8_t number, uint8_t x, uint8_t y);
-void drawSmallNumber(uint8_t number, uint8_t x, uint8_t y);
+uint8_t getIndexOfChar(char c);
+void drawChar16x16(uint8_t x, uint8_t y, char c);
+void drawChar8x8(uint8_t x, uint8_t y, char c);
 
 int main(void) {
-    if(!RccPllHsi::init()) {
-        for(;;){}
-    }
-    
-    SysTickMsTimer::init();
-    BlueLed::init();
-    InputPin::init();
+  if(!RccPllHsi::init()) {
+      for(;;){}
+  }
+  SysTickMsTimer::init();
 
-    I2c1SDA::init();
-    I2c1SCL::init();
-    I2c1::init();
-    uint8_t _raw[20];
-    
-    DS3231 ExtClock(I2c1::getInterface(), 0x68<<1);
-    pExtClock = &ExtClock;
-    ExtClock.init();
-    
-    SSD1306 OledDisplay(I2c1::getInterface(), 0x3C<<1, oledBuf);
-    pOledDisplay = &OledDisplay;
-    OledDisplay.init();
+  I2c1SDA::init();
+  I2c1SCL::init();
+  I2c1::init();
+  
+  DS3231 ExtClock(I2c1::getInterface(), 0x68<<1);
+  pExtClock = &ExtClock;
+  ExtClock.init();
+  
+  SSD1306 OledDisplay(I2c1::getInterface(), 0x3C<<1, oledBuf);
+  pOledDisplay = &OledDisplay;
+  OledDisplay.init();
 
-    uint8_t data[10];
-    uint8_t size = 0;
-    
-    OledDisplay.fill(1);
-    OledDisplay.updateScreen();
-    SysTickMsTimer::delayMs(500);
-    OledDisplay.fill(0);
-    OledDisplay.updateScreen();
-    
-    bool isBlink = false;   
-    uint8_t blincCounter = 0;
-    for (;;) {
+  OledDisplay.fill(0);
+  OledDisplay.updateScreen();
+  
+  bool isBlink = false;   
+  uint8_t blincCounter = 0;
+  for (;;) {
     OledDisplay.fill(0);
     
     switch(clockState) {
@@ -101,11 +99,8 @@ int main(void) {
     
     OledDisplay.updateScreen();
     blincCounter++;
-    if(blincCounter == 10) {
-      blincCounter = 0;
-      isBlink = !isBlink;
-    }
-    SysTickMsTimer::delayMs(40);
+    isBlink = ((blincCounter & 0x04) == 0x04);
+    SysTickMsTimer::delayMs(50);
   }
 }
 
@@ -176,74 +171,53 @@ void setupClockState(SetupState select, bool isBlink) {
 }
 
 void showTime(DS3231* rtc, uint8_t x, uint8_t y) {
-
   TimeStruct time = rtc->getTime();
 
-  drawNumber(time.hours/10, x, y);
-  drawNumber(time.hours%10, x+16, y);
+  drawChar16x16(x,    y, '0'+time.hours/10);
+  drawChar16x16(x+16, y, '0'+time.hours%10);
 
-  pOledDisplay->drawPixel(x+35, y+5, 1);
-  pOledDisplay->drawPixel(x+35, y+6, 1);
-  pOledDisplay->drawPixel(x+36, y+5, 1);
-  pOledDisplay->drawPixel(x+36, y+6, 1);
+  drawChar16x16(x+32, y, ':');
+  
+  drawChar16x16(x+40, y, '0'+time.minutes/10);
+  drawChar16x16(x+56, y, '0'+time.minutes%10);
 
-  pOledDisplay->drawPixel(x+35, y+10, 1);
-  pOledDisplay->drawPixel(x+35, y+11, 1);
-  pOledDisplay->drawPixel(x+36, y+10, 1);
-  pOledDisplay->drawPixel(x+36, y+11, 1);
-
-  drawNumber(time.minutes/10, x+40, y);
-  drawNumber(time.minutes%10, x+56, y);
-
-  pOledDisplay->drawPixel(x+75, y+5, 1);
-  pOledDisplay->drawPixel(x+75, y+6, 1);
-  pOledDisplay->drawPixel(x+76, y+5, 1);
-  pOledDisplay->drawPixel(x+76, y+6, 1);
-
-  pOledDisplay->drawPixel(x+75, y+10, 1);
-  pOledDisplay->drawPixel(x+75, y+11, 1);
-  pOledDisplay->drawPixel(x+76, y+10, 1);
-  pOledDisplay->drawPixel(x+76, y+11, 1);
-
-  drawNumber(time.seconds/10, x+80, y);
-  drawNumber(time.seconds%10, x+96, y);
+  drawChar16x16(x+72, y, ':');
+  
+  drawChar16x16(x+80, y, '0'+time.seconds/10);
+  drawChar16x16(x+96, y, '0'+time.seconds%10);
 }
 
 void showDateWithoutYear(DS3231* rtc, uint8_t x, uint8_t y) {
   DateStruct date = rtc->getDate();
-  
-  drawSmallNumber(date.date/10, x, y);
-  drawSmallNumber(date.date%10, x+8, y);
-  pOledDisplay->drawPixel(x+16, y+7, 1);
-  drawSmallNumber(date.month/10, x+18, y);
-  drawSmallNumber(date.month%10, x+26, y);
+
+  drawChar8x8(x, y, '0'+date.date/10);
+  drawChar8x8(x+8, y, '0'+date.date%10);
+
+  drawChar8x8(x+16, y, '.');  
+
+  drawChar8x8(x+20, y, '0'+date.month/10);
+  drawChar8x8(x+28, y, '0'+date.month%10);
 }
 
 void showDateWithYear(DS3231* rtc, uint8_t x, uint8_t y) {
   showDateWithoutYear(rtc, x, y);
   uint8_t year = rtc->getDate().year;
   
-  pOledDisplay->drawPixel(x+34, y+7, 1);
-  drawSmallNumber(2, x+36, y);
-  drawSmallNumber(0, x+44, y);
-  drawSmallNumber(year/10, x+52, y);
-  drawSmallNumber(year%10, x+60, y);
+  drawChar8x8(x+36, y, '.');
+  
+  drawChar8x8(x+40, y, '2');
+  drawChar8x8(x+48, y, '0');
+  drawChar8x8(x+56, y, '0'+year/10);
+  drawChar8x8(x+64, y, '0'+year%10);
 }
 
 void showTemperature(DS3231* rtc, uint8_t x, uint8_t y) {
   int8_t temperature = rtc->getTemperature();
 
-  drawSmallNumber(temperature/10, x, y);
-  drawSmallNumber(temperature%10, x+8, y);
-  
-  pOledDisplay->drawPixel(x+17, y, 1);
-  pOledDisplay->drawPixel(x+18, y, 1);
-  pOledDisplay->drawPixel(x+16, y+1, 1);
-  pOledDisplay->drawPixel(x+19, y+1, 1);
-  pOledDisplay->drawPixel(x+16, y+2, 1);
-  pOledDisplay->drawPixel(x+19, y+2, 1);
-  pOledDisplay->drawPixel(x+17, y+3, 1);
-  pOledDisplay->drawPixel(x+18, y+3, 1);
+  drawChar8x8(x+0, y, '0'+temperature/10);
+  drawChar8x8(x+8, y, '0'+temperature%10);
+
+  drawChar8x8(x+16, y, 'D');
 }
 
 void showCursor(SetupState select, bool isBlink) {
@@ -263,15 +237,15 @@ void showCursor(SetupState select, bool isBlink) {
     break;
   case SetupState::DATE:
     x = 14; y = 9;
-    width = 15; height = 9;
+    width = 16; height = 9;
     break;
   case SetupState::MONTH:
-    x = 32; y = 9;
-    width = 15; height = 9;
+    x = 34; y = 9;
+    width = 16; height = 9;
     break;
   case SetupState::YEAR:
-    x = 50; y = 9;
-    width = 31; height = 9;
+    x = 54; y = 9;
+    width = 32; height = 9;
     break;
   }
   if(isBlink) {
@@ -307,8 +281,18 @@ bool minusButtonPressed() {
   return pressed;
 }
 
-void drawNumber(uint8_t number, uint8_t x, uint8_t y) {
-  if(number > 9) return;
+uint8_t getIndexOfChar(char c) {
+  static const char map[] = "0123456789.:D";
+  for(uint8_t i = 0; i < FONT_SIZE; ++i) {
+    if(c == map[i]) {
+      return i;
+    }
+  }
+  return 10; // '.' for all unknown symbols
+}
+
+void drawChar16x16(uint8_t x, uint8_t y, char c) {
+  uint8_t number = getIndexOfChar(c);
   const uint8_t* ptr = &font8x8[number][0];
   for(uint8_t i = 0; i < 8; i++) {
     for(uint8_t j = 0; j < 8; j++) {
@@ -320,8 +304,8 @@ void drawNumber(uint8_t number, uint8_t x, uint8_t y) {
     ptr++;
   }
 }
-void drawSmallNumber(uint8_t number, uint8_t x, uint8_t y) {
-  if(number > 9) return;
+void drawChar8x8(uint8_t x, uint8_t y, char c) {
+  uint8_t number = getIndexOfChar(c);
   const uint8_t* ptr = &font8x8[number][0];
   for(uint8_t i = 0; i < 8; i++) {
     for(uint8_t j = 0; j < 8; j++) {

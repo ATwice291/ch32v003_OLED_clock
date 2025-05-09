@@ -9,24 +9,14 @@
 #include "ssd1306.hpp"
 
 using SysClkHsi = SysClock<SysClockSource::HSI>;
-
-//using Hse24 = Hse<24000000, HseBypass::OFF>;
-//using SysClkHse = SysClock<SysClockSource::HSE, Hse24, ClockSafety::ON>;
-
 using RccPllHsi = Rcc<SysClkHsi, AhbPsc::AHB1>;
-//using RccPllHse = Rcc<SysClkHse, AhbPsc::AHB3>;
-
 using SysTickMsTimer = SysTickMs<RccPllHsi>;
-
-using BlueLed = Gpio<GpioPort::D, GpioPin::P6, GpioMode::Out2M, GpioCnf::PP, GpioPull::Down>;
-using InputPin = Gpio<GpioPort::C, GpioPin::P3, GpioMode::In, GpioCnf::Pull, GpioPull::Up>;
 
 using I2c1SDA = Gpio<GpioPort::C, GpioPin::P1, GpioMode::Out50M, GpioCnf::AltOD, GpioPull::Up>;
 using I2c1SCL = Gpio<GpioPort::C, GpioPin::P2, GpioMode::Out50M, GpioCnf::AltOD, GpioPull::Up>;
 using InputPin = Gpio<GpioPort::C, GpioPin::P3, GpioMode::In, GpioCnf::Pull, GpioPull::Up>;
 using I2c1Params = I2cParams<I2cInstance::i2c1, I2cSpeed::fast>;
 using I2c1 = I2c<I2c1Params, RccPllHsi, SysTickMsTimer>;
-
 
 using ModeButton = Gpio<GpioPort::C, GpioPin::P0, GpioMode::In, GpioCnf::Pull, GpioPull::Up>;
 using PlusButton = Gpio<GpioPort::C, GpioPin::P3, GpioMode::In, GpioCnf::Pull, GpioPull::Up>;
